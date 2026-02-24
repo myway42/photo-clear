@@ -3,7 +3,7 @@ import { Image } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Dimensions, FlatList, Modal, Pressable, Text, View } from 'react-native'
 
 import { useCleanDispatch, useCleanState } from '@/contexts/clean-context'
 
@@ -59,12 +59,12 @@ export default function CleanConfirmScreen() {
   // Delete success result
   if (deleteResult) {
     return (
-      <View style={styles.centerContainer}>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='checkmark-circle' size={80} color='#4cd964' />
-        <Text style={styles.resultTitle}>删除完成</Text>
-        <Text style={styles.resultSubtitle}>成功删除 {deleteResult.count} 张照片</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>返回首页</Text>
+        <Text className='text-white text-2xl font-bold mt-4'>删除完成</Text>
+        <Text className='text-gray-400 text-base mt-2'>成功删除 {deleteResult.count} 张照片</Text>
+        <Pressable className='mt-6 px-6 py-3 bg-neutral-700 rounded-lg' onPress={() => router.back()}>
+          <Text className='text-white text-base'>返回首页</Text>
         </Pressable>
       </View>
     )
@@ -73,27 +73,38 @@ export default function CleanConfirmScreen() {
   // Empty state
   if (state.markedForDeletion.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='trash-outline' size={64} color='#666' />
-        <Text style={styles.emptyTitle}>暂无待删除照片</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>返回清理</Text>
+        <Text className='text-white text-xl font-semibold mt-4'>暂无待删除照片</Text>
+        <Pressable className='mt-6 px-6 py-3 bg-neutral-700 rounded-lg' onPress={() => router.back()}>
+          <Text className='text-white text-base'>返回清理</Text>
         </Pressable>
       </View>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <View className='flex-1 bg-dark'>
       <FlatList
         data={state.markedForDeletion}
         numColumns={COLUMN_COUNT}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={{ padding: GAP, paddingBottom: 100 }}
         renderItem={({ item }) => (
-          <Pressable style={styles.thumbWrapper} onPress={() => setPreviewAsset(item)}>
-            <Image source={{ uri: item.uri }} style={styles.thumb} contentFit='cover' />
-            <Pressable style={styles.removeButton} onPress={() => handleRemove(item.id)} hitSlop={8}>
+          <Pressable
+            style={{ width: THUMB_SIZE, height: THUMB_SIZE, margin: GAP / 2 }}
+            onPress={() => setPreviewAsset(item)}
+          >
+            <Image
+              source={{ uri: item.uri }}
+              style={{ width: '100%', height: '100%', borderRadius: 4 }}
+              contentFit='cover'
+            />
+            <Pressable
+              className='absolute top-1 right-1 bg-black/50 rounded-full'
+              onPress={() => handleRemove(item.id)}
+              hitSlop={8}
+            >
               <Ionicons name='close-circle' size={22} color='#fff' />
             </Pressable>
           </Pressable>
@@ -101,13 +112,13 @@ export default function CleanConfirmScreen() {
       />
 
       {/* Bottom bar */}
-      <View style={styles.bottomBar}>
+      <View className='absolute bottom-0 left-0 right-0 px-5 pb-[34px] pt-3 bg-dark/95'>
         <Pressable
-          style={[styles.deleteAllButton, isDeleting && styles.deleteAllButtonDisabled]}
+          className={`bg-danger py-4 rounded-xl items-center ${isDeleting ? 'opacity-50' : ''}`}
           onPress={handleConfirmDelete}
           disabled={isDeleting}
         >
-          <Text style={styles.deleteAllText}>
+          <Text className='text-white text-lg font-semibold'>
             {isDeleting ? '删除中...' : `确认删除 (${state.markedForDeletion.length} 张)`}
           </Text>
         </Pressable>
@@ -115,22 +126,26 @@ export default function CleanConfirmScreen() {
 
       {/* Preview modal */}
       <Modal visible={!!previewAsset} transparent animationType='fade'>
-        <View style={styles.modalBackdrop}>
-          <Pressable style={styles.modalClose} onPress={() => setPreviewAsset(null)}>
+        <View className='flex-1 bg-black/95 justify-center items-center'>
+          <Pressable className='absolute top-[60px] right-5 z-10 p-2' onPress={() => setPreviewAsset(null)}>
             <Ionicons name='close' size={28} color='#fff' />
           </Pressable>
           {previewAsset && (
-            <Image source={{ uri: previewAsset.uri }} style={styles.previewImage} contentFit='contain' />
+            <Image
+              source={{ uri: previewAsset.uri }}
+              style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.3 }}
+              contentFit='contain'
+            />
           )}
           {previewAsset && (
             <Pressable
-              style={styles.modalRemoveButton}
+              className='mt-6 px-6 py-3 bg-white/15 rounded-lg'
               onPress={() => {
                 handleRemove(previewAsset.id)
                 setPreviewAsset(null)
               }}
             >
-              <Text style={styles.modalRemoveText}>取消删除此照片</Text>
+              <Text className='text-white text-base'>取消删除此照片</Text>
             </Pressable>
           )}
         </View>
@@ -138,119 +153,3 @@ export default function CleanConfirmScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  grid: {
-    padding: GAP,
-    paddingBottom: 100,
-  },
-  thumbWrapper: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    margin: GAP / 2,
-    position: 'relative',
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 4,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 11,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 34,
-    paddingTop: 12,
-    backgroundColor: 'rgba(26,26,46,0.95)',
-  },
-  deleteAllButton: {
-    backgroundColor: '#ff3b30',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  deleteAllButtonDisabled: {
-    opacity: 0.5,
-  },
-  deleteAllText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  backButton: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#333',
-    borderRadius: 10,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  resultTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-  },
-  resultSubtitle: {
-    color: '#aaa',
-    fontSize: 16,
-    marginTop: 8,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 1,
-    padding: 8,
-  },
-  previewImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 1.3,
-  },
-  modalRemoveButton: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10,
-  },
-  modalRemoveText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-})

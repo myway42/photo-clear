@@ -5,7 +5,7 @@ import { CleanProvider } from '@/contexts/clean-context'
 
 export default function TabLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView className='flex-1'>
       <CleanProvider>
         <Stack>
           <Stack.Screen name='index' options={{ title: '照片清理' }} />

@@ -6,7 +6,7 @@ import * as MediaLibrary from 'expo-media-library'
 import { useRouter } from 'expo-router'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Dimensions, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Dimensions, FlatList, Modal, Platform, Pressable, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -287,10 +287,10 @@ export default function CleanScreen() {
   // Permission denied
   if (permissionStatus === MediaLibrary.PermissionStatus.DENIED) {
     return (
-      <View style={styles.centerContainer}>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='images-outline' size={64} color='#666' />
-        <Text style={styles.emptyTitle}>需要相册权限</Text>
-        <Text style={styles.emptySubtitle}>请在系统设置中允许访问相册</Text>
+        <Text className='text-white text-2xl font-bold mt-4'>需要相册权限</Text>
+        <Text className='text-gray-500 text-base mt-2 text-center'>请在系统设置中允许访问相册</Text>
       </View>
     )
   }
@@ -298,8 +298,8 @@ export default function CleanScreen() {
   // Loading
   if (permissionStatus === null || !isLoaded) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptySubtitle}>加载中...</Text>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
+        <Text className='text-gray-500 text-base mt-2 text-center'>加载中...</Text>
       </View>
     )
   }
@@ -307,32 +307,47 @@ export default function CleanScreen() {
   // Empty album
   if (state.assets.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='images-outline' size={64} color='#666' />
-        <Text style={styles.emptyTitle}>{state.selectedYear ? `${state.selectedYear} 年没有内容` : '相册为空'}</Text>
-        <Text style={styles.emptySubtitle}>没有找到任何照片或视频</Text>
-        <Pressable style={styles.yearDropdownLarge} onPress={() => setYearPickerVisible(true)}>
+        <Text className='text-white text-2xl font-bold mt-4'>
+          {state.selectedYear ? `${state.selectedYear} 年没有内容` : '相册为空'}
+        </Text>
+        <Text className='text-gray-500 text-base mt-2 text-center'>没有找到任何照片或视频</Text>
+        <Pressable
+          className='flex-row items-center gap-2 bg-white/[0.08] px-5 py-3 rounded-xl mt-6'
+          onPress={() => setYearPickerVisible(true)}
+        >
           <Ionicons name='calendar-outline' size={18} color='#ccc' />
-          <Text style={styles.yearDropdownLargeText}>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
+          <Text className='text-gray-300 text-base'>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
         </Pressable>
 
         {/* Year picker modal */}
         <Modal visible={yearPickerVisible} transparent animationType='fade'>
-          <Pressable style={styles.pickerBackdrop} onPress={() => setYearPickerVisible(false)}>
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerTitle}>选择年份</Text>
+          <Pressable
+            className='flex-1 bg-black/60 justify-center items-center'
+            onPress={() => setYearPickerVisible(false)}
+          >
+            <View
+              className='bg-dark-card rounded-2xl overflow-hidden'
+              style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
+            >
+              <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
+                选择年份
+              </Text>
               <FlatList
                 data={yearOptions}
                 keyExtractor={(item) => String(item ?? 'all')}
                 renderItem={({ item: year }) => (
                   <Pressable
-                    style={[styles.pickerItem, state.selectedYear === year && styles.pickerItemActive]}
+                    className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
                     onPress={() => {
                       handleSelectYear(year)
                       setYearPickerVisible(false)
                     }}
                   >
-                    <Text style={[styles.pickerItemText, state.selectedYear === year && styles.pickerItemTextActive]}>
+                    <Text
+                      className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
+                    >
                       {year ?? '全部年份'}
                     </Text>
                     {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
@@ -349,39 +364,54 @@ export default function CleanScreen() {
   // Finished
   if (isFinished) {
     return (
-      <View style={styles.centerContainer}>
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='checkmark-circle-outline' size={80} color='#4cd964' />
-        <Text style={styles.emptyTitle}>浏览完毕！</Text>
-        <Text style={styles.emptySubtitle}>已标记 {state.markedForDeletion.length} 张待删除</Text>
+        <Text className='text-white text-2xl font-bold mt-4'>浏览完毕！</Text>
+        <Text className='text-gray-500 text-base mt-2 text-center'>
+          已标记 {state.markedForDeletion.length} 张待删除
+        </Text>
         {state.markedForDeletion.length > 0 && (
-          <Pressable style={styles.confirmButton} onPress={() => router.push('/clean-confirm')}>
-            <Text style={styles.confirmButtonText}>确认删除 ({state.markedForDeletion.length})</Text>
+          <Pressable className='bg-danger px-8 py-3.5 rounded-xl mt-6' onPress={() => router.push('/clean-confirm')}>
+            <Text className='text-white text-lg font-semibold'>确认删除 ({state.markedForDeletion.length})</Text>
           </Pressable>
         )}
-        <Pressable style={styles.undoButtonLarge} onPress={handleUndo}>
-          <Text style={styles.undoButtonLargeText}>撤销上一步</Text>
+        <Pressable className='px-6 py-3 mt-3' onPress={handleUndo}>
+          <Text className='text-gray-400 text-base underline'>撤销上一步</Text>
         </Pressable>
-        <Pressable style={styles.yearDropdownLarge} onPress={() => setYearPickerVisible(true)}>
+        <Pressable
+          className='flex-row items-center gap-2 bg-white/[0.08] px-5 py-3 rounded-xl mt-6'
+          onPress={() => setYearPickerVisible(true)}
+        >
           <Ionicons name='calendar-outline' size={18} color='#ccc' />
-          <Text style={styles.yearDropdownLargeText}>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
+          <Text className='text-gray-300 text-base'>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
         </Pressable>
 
         <Modal visible={yearPickerVisible} transparent animationType='fade'>
-          <Pressable style={styles.pickerBackdrop} onPress={() => setYearPickerVisible(false)}>
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerTitle}>选择年份</Text>
+          <Pressable
+            className='flex-1 bg-black/60 justify-center items-center'
+            onPress={() => setYearPickerVisible(false)}
+          >
+            <View
+              className='bg-dark-card rounded-2xl overflow-hidden'
+              style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
+            >
+              <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
+                选择年份
+              </Text>
               <FlatList
                 data={yearOptions}
                 keyExtractor={(item) => String(item ?? 'all')}
                 renderItem={({ item: year }) => (
                   <Pressable
-                    style={[styles.pickerItem, state.selectedYear === year && styles.pickerItemActive]}
+                    className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
                     onPress={() => {
                       handleSelectYear(year)
                       setYearPickerVisible(false)
                     }}
                   >
-                    <Text style={[styles.pickerItemText, state.selectedYear === year && styles.pickerItemTextActive]}>
+                    <Text
+                      className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
+                    >
                       {year ?? '全部年份'}
                     </Text>
                     {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
@@ -396,42 +426,58 @@ export default function CleanScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View className='flex-1 bg-dark'>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.progress}>
+      <View className='flex-row justify-between items-center px-5 py-2'>
+        <Text className='text-gray-400 text-base'>
           {state.currentIndex + 1} / {state.totalCount}
         </Text>
-        <Pressable style={styles.yearDropdown} onPress={() => setYearPickerVisible(true)}>
+        <Pressable
+          className='flex-row items-center gap-1.5 bg-white/[0.08] px-3 py-1.5 rounded-2xl'
+          onPress={() => setYearPickerVisible(true)}
+        >
           <Ionicons name='calendar-outline' size={16} color='#aaa' />
-          <Text style={styles.yearDropdownText}>{state.selectedYear ?? '全部年份'}</Text>
+          <Text className='text-gray-300 text-sm'>{state.selectedYear ?? '全部年份'}</Text>
           <Ionicons name='chevron-down' size={14} color='#aaa' />
         </Pressable>
         {state.markedForDeletion.length > 0 && (
-          <Pressable style={styles.headerButton} onPress={() => router.push('/clean-confirm')}>
+          <Pressable
+            className='flex-row items-center gap-1 bg-danger/[0.15] px-3 py-1.5 rounded-2xl'
+            onPress={() => router.push('/clean-confirm')}
+          >
             <Ionicons name='trash-outline' size={20} color='#ff3b30' />
-            <Text style={styles.headerBadge}>{state.markedForDeletion.length}</Text>
+            <Text className='text-danger text-sm font-semibold'>{state.markedForDeletion.length}</Text>
           </Pressable>
         )}
       </View>
 
       {/* Year picker modal */}
       <Modal visible={yearPickerVisible} transparent animationType='fade'>
-        <Pressable style={styles.pickerBackdrop} onPress={() => setYearPickerVisible(false)}>
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerTitle}>选择年份</Text>
+        <Pressable
+          className='flex-1 bg-black/60 justify-center items-center'
+          onPress={() => setYearPickerVisible(false)}
+        >
+          <View
+            className='bg-dark-card rounded-2xl overflow-hidden'
+            style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
+          >
+            <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
+              选择年份
+            </Text>
             <FlatList
               data={yearOptions}
               keyExtractor={(item) => String(item ?? 'all')}
               renderItem={({ item: year }) => (
                 <Pressable
-                  style={[styles.pickerItem, state.selectedYear === year && styles.pickerItemActive]}
+                  className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
                   onPress={() => {
                     handleSelectYear(year)
                     setYearPickerVisible(false)
                   }}
                 >
-                  <Text style={[styles.pickerItemText, state.selectedYear === year && styles.pickerItemTextActive]}>
+                  <Text
+                    className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
+                  >
                     {year ?? '全部年份'}
                   </Text>
                   {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
@@ -443,46 +489,95 @@ export default function CleanScreen() {
       </Modal>
 
       {/* Card area */}
-      <View style={styles.cardContainer}>
+      <View className='flex-1 items-center justify-center'>
         {/* Next card (behind) */}
         {nextAsset && (
-          <View style={[styles.card, styles.nextCard]}>
-            <Image source={{ uri: nextAsset.uri }} style={styles.cardImage} contentFit='contain' />
+          <View
+            className='rounded-2xl overflow-hidden bg-dark-card absolute'
+            style={{ width: SCREEN_WIDTH - 32, height: SCREEN_WIDTH * 1.2, transform: [{ scale: 0.95 }], opacity: 0.5 }}
+          >
+            <Image source={{ uri: nextAsset.uri }} style={{ width: '100%', height: '100%' }} contentFit='contain' />
           </View>
         )}
 
         {/* Current card */}
         {currentAsset && (
           <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.card, cardAnimatedStyle]}>
+            <Animated.View
+              className='rounded-2xl overflow-hidden bg-dark-card absolute'
+              style={[{ width: SCREEN_WIDTH - 32, height: SCREEN_WIDTH * 1.2 }, cardAnimatedStyle]}
+            >
               {livePhotoSource && livePhotoSource.assetId === currentAsset.id ? (
-                <LivePhotoView source={livePhotoSource} style={styles.cardImage} contentFit='contain' />
+                <LivePhotoView
+                  source={livePhotoSource}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit='contain'
+                />
               ) : isVideo ? (
-                <VideoView player={videoPlayer} style={styles.cardImage} contentFit='contain' nativeControls={false} />
+                <VideoView
+                  player={videoPlayer}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit='contain'
+                  nativeControls={false}
+                />
               ) : (
-                <Image source={{ uri: currentAsset.uri }} style={styles.cardImage} contentFit='contain' />
+                <Image
+                  source={{ uri: currentAsset.uri }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit='contain'
+                />
               )}
               {/* Live Photo badge */}
               {livePhotoSource?.assetId === currentAsset.id && (
-                <View style={styles.liveBadge}>
+                <View className='absolute top-3 left-3 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-lg'>
                   <Ionicons name='radio-button-on' size={10} color='#fff' />
-                  <Text style={styles.liveBadgeText}>LIVE</Text>
+                  <Text className='text-white text-[11px] font-semibold tracking-wide'>LIVE</Text>
                 </View>
               )}
               {/* Video badge */}
               {isVideo && currentAsset.duration > 0 && (
-                <View style={styles.liveBadge}>
+                <View className='absolute top-3 left-3 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-lg'>
                   <Ionicons name='videocam' size={12} color='#fff' />
-                  <Text style={styles.liveBadgeText}>{formatDuration(currentAsset.duration)}</Text>
+                  <Text className='text-white text-[11px] font-semibold tracking-wide'>
+                    {formatDuration(currentAsset.duration)}
+                  </Text>
                 </View>
               )}
               {/* Skip overlay */}
-              <Animated.View style={[styles.overlay, styles.skipOverlay, skipOverlayStyle]}>
-                <Text style={styles.overlayText}>跳过</Text>
+              <Animated.View
+                className='absolute inset-0 justify-center items-center rounded-2xl bg-warning/40'
+                style={skipOverlayStyle}
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 48,
+                    fontWeight: 'bold',
+                    textShadowColor: 'rgba(0,0,0,0.5)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 4,
+                  }}
+                >
+                  跳过
+                </Text>
               </Animated.View>
               {/* Delete overlay */}
-              <Animated.View style={[styles.overlay, styles.deleteOverlay, deleteOverlayStyle]}>
-                <Text style={styles.overlayText}>删除</Text>
+              <Animated.View
+                className='absolute inset-0 justify-center items-center rounded-2xl bg-danger/40'
+                style={deleteOverlayStyle}
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 48,
+                    fontWeight: 'bold',
+                    textShadowColor: 'rgba(0,0,0,0.5)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 4,
+                  }}
+                >
+                  删除
+                </Text>
               </Animated.View>
             </Animated.View>
           </GestureDetector>
@@ -491,275 +586,38 @@ export default function CleanScreen() {
 
       {/* Photo info */}
       {currentAsset && (
-        <View style={styles.infoBar}>
-          <Text style={styles.infoText} numberOfLines={1}>
+        <View className='px-5 py-3 items-center'>
+          <Text className='text-gray-300 text-sm' numberOfLines={1}>
             {currentAsset.filename}
           </Text>
-          <Text style={styles.infoDate}>{formatDate(currentAsset.creationTime)}</Text>
+          <Text className='text-gray-500 text-xs mt-0.5'>{formatDate(currentAsset.creationTime)}</Text>
         </View>
       )}
 
       {/* Action buttons */}
-      <View style={styles.actions}>
-        <Pressable style={[styles.actionButton, styles.skipButton]} onPress={() => animateSwipe('left')}>
+      <View className='flex-row justify-center items-center gap-6 pb-8 pt-2'>
+        <Pressable
+          className='w-[60px] h-[60px] rounded-full justify-center items-center border-2 border-warning'
+          onPress={() => animateSwipe('left')}
+        >
           <Ionicons name='close' size={32} color='#ff9500' />
         </Pressable>
 
         <Pressable
-          style={[styles.actionButton, styles.undoButton]}
+          className='w-12 h-12 rounded-full justify-center items-center border border-gray-600'
           onPress={handleUndo}
           disabled={state.actionHistory.length === 0}
         >
           <Ionicons name='arrow-undo' size={24} color={state.actionHistory.length === 0 ? '#555' : '#fff'} />
         </Pressable>
 
-        <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={() => animateSwipe('right')}>
+        <Pressable
+          className='w-[60px] h-[60px] rounded-full justify-center items-center border-2 border-danger'
+          onPress={() => animateSwipe('right')}
+        >
           <Ionicons name='trash' size={32} color='#ff3b30' />
         </Pressable>
       </View>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  progress: {
-    color: '#aaa',
-    fontSize: 16,
-  },
-  headerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,59,48,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  headerBadge: {
-    color: '#ff3b30',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  yearDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  yearDropdownText: {
-    color: '#ccc',
-    fontSize: 14,
-  },
-  pickerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickerContainer: {
-    backgroundColor: '#2a2a3e',
-    borderRadius: 16,
-    width: SCREEN_WIDTH * 0.7,
-    maxHeight: 400,
-    overflow: 'hidden',
-  },
-  pickerTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  pickerItemActive: {
-    backgroundColor: 'rgba(255,59,48,0.1)',
-  },
-  pickerItemText: {
-    color: '#ccc',
-    fontSize: 16,
-  },
-  pickerItemTextActive: {
-    color: '#ff3b30',
-    fontWeight: '600',
-  },
-  cardContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
-    width: SCREEN_WIDTH - 32,
-    height: SCREEN_WIDTH * 1.2,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#2a2a3e',
-    position: 'absolute',
-  },
-  nextCard: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.5,
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  liveBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  liveBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 16,
-  },
-  skipOverlay: {
-    backgroundColor: 'rgba(255,149,0,0.4)',
-  },
-  deleteOverlay: {
-    backgroundColor: 'rgba(255,59,48,0.4)',
-  },
-  overlayText: {
-    color: '#fff',
-    fontSize: 48,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-  },
-  infoBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  infoText: {
-    color: '#ccc',
-    fontSize: 14,
-  },
-  infoDate: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
-    paddingBottom: 32,
-    paddingTop: 8,
-  },
-  actionButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-  },
-  skipButton: {
-    borderColor: '#ff9500',
-  },
-  undoButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderColor: '#555',
-    borderWidth: 1,
-  },
-  deleteButton: {
-    borderColor: '#ff3b30',
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    color: '#888',
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  confirmButton: {
-    backgroundColor: '#ff3b30',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 24,
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  undoButtonLarge: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginTop: 12,
-  },
-  undoButtonLargeText: {
-    color: '#aaa',
-    fontSize: 16,
-    textDecorationLine: 'underline',
-  },
-  yearDropdownLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 24,
-  },
-  yearDropdownLargeText: {
-    color: '#ccc',
-    fontSize: 16,
-  },
-})

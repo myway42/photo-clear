@@ -1,50 +1,52 @@
-# Welcome to your Expo app 👋
+# Photo Clear
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+一款基于 Expo 的照片清理应用，通过 Tinder 风格的左右滑动快速筛选并批量删除不需要的照片和视频。
 
-## Get started
+## 功能
 
-1. Install dependencies
+- **左右滑动清理** — 左滑跳过，右滑标记删除，支持撤销
+- **批量删除确认** — 网格预览已标记的照片/视频，确认后批量删除
+- **年份筛选** — 按年份过滤，快速定位旧照片
+- **实况图支持** — 长按播放 Live Photo 动画（iOS）
+- **视频播放** — 卡片内自动循环播放视频
+- **触觉反馈** — 滑动操作带震动反馈
 
-   ```bash
-   npm install
-   ```
+## 技术栈
 
-2. Start the app
+- Expo SDK 54 + React Native 0.81 + React 19
+- Expo Router 6（文件系统路由）
+- TypeScript（strict 模式）
+- react-native-reanimated + react-native-gesture-handler
+- expo-media-library / expo-image / expo-video / expo-live-photo
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 开始使用
 
 ```bash
-npm run reset-project
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm start
+
+# 通过 tunnel 启动（远程调试）
+npm run start-tunnel
+
+# iOS 模拟器
+npm run ios
+
+# Android 模拟器
+npm run android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 项目结构
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```tree
+app/                    # 页面路由
+  (tabs)/
+    index.tsx           # 首页入口
+    clean.tsx           # 滑动清理页面
+    clean-confirm.tsx   # 确认删除页面
+contexts/
+  clean-context.tsx     # 清理状态管理
+assets/images/          # 应用图标、启动画面
+```

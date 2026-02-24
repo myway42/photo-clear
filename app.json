@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "expo-demo",
-    "slug": "expo-demo",
+    "name": "photo-clear",
+    "slug": "photo-clear",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "expodemo",
+    "scheme": "photoclear",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -37,6 +37,14 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "允许访问您的相册以浏览和清理照片",
+          "savePhotosPermission": "允许保存照片到相册",
+          "isAccessMediaLocationEnabled": true
         }
       ]
     ],

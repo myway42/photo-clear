@@ -63,7 +63,7 @@ export default function CleanConfirmScreen() {
         <Ionicons name='checkmark-circle' size={80} color='#4cd964' />
         <Text className='text-white text-2xl font-bold mt-4'>删除完成</Text>
         <Text className='text-gray-400 text-base mt-2'>成功删除 {deleteResult.count} 张照片</Text>
-        <Pressable className='mt-6 px-6 py-3 bg-neutral-700 rounded-lg' onPress={() => router.back()}>
+        <Pressable className='mt-6 px-6 py-3 bg-neutral-700 rounded-lg' onPress={() => router.dismissAll()}>
           <Text className='text-white text-base'>返回首页</Text>
         </Pressable>
       </View>

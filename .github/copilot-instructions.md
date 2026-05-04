@@ -30,7 +30,30 @@ assets/images/          # 静态图片资源（应用图标、启动画面）
 
 - 使用函数组件 + `export default` 导出页面
 - 非页面文件（Context、工具函数等）不放在 `app/` 目录下，避免被 Expo Router 识别为路由
-- 样式使用 `StyleSheet.create` 定义，放在组件文件底部
+- 样式优先使用 `tailwindcss` 工具类，推荐配合 `className` 属性和 `nativewind` 使用
+- 如遇无法覆盖的场景，可补充使用 `StyleSheet.create`，并将样式定义放在组件文件底部
+
+示例：
+
+```tsx
+<View className='flex-1 bg-white p-4'>
+  <Text className='text-lg font-bold text-gray-900'>Hello</Text>
+</View>
+```
+
+// 如需自定义动画、复杂样式，可结合 StyleSheet.create：
+
+```tsx
+const styles = StyleSheet.create({
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+})
+```
+
 - 页面跳转使用 `expo-router` 的 `Link` 组件或 `useRouter` Hook
 - 所有组件文件使用 `.tsx` 扩展名
 - 遵循 `eslint-config-expo` 规则

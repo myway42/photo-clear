@@ -6,7 +6,7 @@ import * as MediaLibrary from 'expo-media-library'
 import { useRouter } from 'expo-router'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Dimensions, FlatList, Modal, Platform, Pressable, Text, View } from 'react-native'
+import { Alert, Dimensions, Platform, Pressable, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -25,8 +25,6 @@ export default function CleanScreen() {
   const dispatch = useCleanDispatch()
   const router = useRouter()
   const [permissionStatus, setPermissionStatus] = useState<MediaLibrary.PermissionStatus | null>(null)
-  const [yearPickerVisible, setYearPickerVisible] = useState(false)
-  const [yearOptions, setYearOptions] = useState<(number | null)[]>([null])
   const [isLoaded, setIsLoaded] = useState(false)
 
   const [livePhotoSource, setLivePhotoSource] = useState<{
@@ -41,46 +39,25 @@ export default function CleanScreen() {
   const cardOpacity = useSharedValue(1)
 
   const getDateRange = useCallback(
-    (year: number | null): Pick<MediaLibrary.AssetsOptions, 'createdAfter' | 'createdBefore'> => {
+    (year: number | null, month: number | null): Pick<MediaLibrary.AssetsOptions, 'createdAfter' | 'createdBefore'> => {
       if (year === null) return {}
+      if (month === null) {
+        return {
+          createdAfter: new Date(year, 0, 1),
+          createdBefore: new Date(year + 1, 0, 1),
+        }
+      }
       return {
-        createdAfter: new Date(year, 0, 1),
-        createdBefore: new Date(year + 1, 0, 1),
+        createdAfter: new Date(year, month - 1, 1),
+        createdBefore: new Date(year, month, 1),
       }
     },
     [],
   )
 
-  // Build year options from earliest photo, only include years with photos
-  const loadYearOptions = useCallback(async () => {
-    const oldest = await MediaLibrary.getAssetsAsync({
-      first: 1,
-      sortBy: [[MediaLibrary.SortBy.creationTime, true]],
-      mediaType: [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video],
-    })
-    const currentYear = new Date().getFullYear()
-    let startYear = currentYear - 5
-    if (oldest.assets.length > 0) {
-      startYear = new Date(oldest.assets[0].creationTime).getFullYear()
-    }
-    const years: (number | null)[] = [null]
-    for (let y = currentYear; y >= startYear; y--) {
-      const result = await MediaLibrary.getAssetsAsync({
-        first: 1,
-        mediaType: [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video],
-        createdAfter: new Date(y, 0, 1),
-        createdBefore: new Date(y + 1, 0, 1),
-      })
-      if (result.totalCount > 0) {
-        years.push(y)
-      }
-    }
-    setYearOptions(years)
-  }, [])
-
   const loadInitialAssets = useCallback(async () => {
     setIsLoaded(false)
-    const dateRange = getDateRange(state.selectedYear)
+    const dateRange = getDateRange(state.selectedYear, state.selectedMonth)
     const result = await MediaLibrary.getAssetsAsync({
       first: PAGE_SIZE,
       sortBy: [MediaLibrary.SortBy.creationTime],
@@ -97,23 +74,23 @@ export default function CleanScreen() {
       },
     })
     setIsLoaded(true)
-  }, [dispatch, getDateRange, state.selectedYear])
+  }, [dispatch, getDateRange, state.selectedYear, state.selectedMonth])
 
-  // Request permission & load year options
+  // Request permission & load assets
   useEffect(() => {
+    if (!state.reviewedIdsLoaded) return
     ;(async () => {
       const { status } = await MediaLibrary.requestPermissionsAsync()
       setPermissionStatus(status)
       if (status === MediaLibrary.PermissionStatus.GRANTED) {
-        await loadYearOptions()
         loadInitialAssets()
       }
     })()
-  }, [loadInitialAssets, loadYearOptions])
+  }, [loadInitialAssets, state.reviewedIdsLoaded])
 
   const loadMoreAssets = useCallback(async () => {
     if (!state.hasNextPage || !state.endCursor) return
-    const dateRange = getDateRange(state.selectedYear)
+    const dateRange = getDateRange(state.selectedYear, state.selectedMonth)
     const result = await MediaLibrary.getAssetsAsync({
       first: PAGE_SIZE,
       after: state.endCursor,
@@ -129,14 +106,14 @@ export default function CleanScreen() {
         endCursor: result.endCursor,
       },
     })
-  }, [state.hasNextPage, state.endCursor, dispatch, getDateRange, state.selectedYear])
+  }, [state.hasNextPage, state.endCursor, dispatch, getDateRange, state.selectedYear, state.selectedMonth])
 
-  // Reload when year changes
+  // Reload when year/month changes
   useEffect(() => {
-    if (permissionStatus === MediaLibrary.PermissionStatus.GRANTED) {
+    if (permissionStatus === MediaLibrary.PermissionStatus.GRANTED && state.reviewedIdsLoaded) {
       loadInitialAssets()
     }
-  }, [state.selectedYear, permissionStatus, loadInitialAssets])
+  }, [state.selectedYear, state.selectedMonth, permissionStatus, loadInitialAssets, state.reviewedIdsLoaded])
 
   // Preload more when approaching the end
   useEffect(() => {
@@ -147,7 +124,7 @@ export default function CleanScreen() {
 
   const currentAsset = state.assets[state.currentIndex]
   const nextAsset = state.assets[state.currentIndex + 1]
-  const isFinished = state.currentIndex >= state.assets.length && state.assets.length > 0
+  const isFinished = state.currentIndex >= state.assets.length && state.assets.length > 0 && !state.hasNextPage
   const isVideo = currentAsset?.mediaType === 'video'
 
   // Video player for current asset
@@ -187,13 +164,12 @@ export default function CleanScreen() {
     }
   }, [currentAsset, isLivePhotoAvailable])
 
-  const handleSelectYear = useCallback(
-    (year: number | null) => {
-      if (year === state.selectedYear) return
-      dispatch({ type: 'SET_YEAR', year })
-    },
-    [dispatch, state.selectedYear],
-  )
+  const periodLabel =
+    state.selectedYear === null
+      ? '全部照片'
+      : state.selectedMonth === null
+        ? `${state.selectedYear}年`
+        : `${state.selectedYear}年${state.selectedMonth}月`
 
   const hapticFeedback = useCallback(() => {
     if (Platform.OS !== 'web') {
@@ -222,6 +198,54 @@ export default function CleanScreen() {
     hapticFeedback()
     dispatch({ type: 'UNDO' })
   }, [dispatch, hapticFeedback])
+
+  const handleReReviewPeriod = useCallback(() => {
+    Alert.alert('重新整理', `确定要重新整理${periodLabel}的照片吗？`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确定',
+        onPress: async () => {
+          const dateRange = getDateRange(state.selectedYear, state.selectedMonth)
+          const assetIds: string[] = []
+          let cursor: string | undefined
+          let hasNext = true
+          while (hasNext) {
+            const result = await MediaLibrary.getAssetsAsync({
+              first: 500,
+              after: cursor,
+              sortBy: [MediaLibrary.SortBy.creationTime],
+              mediaType: [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video],
+              ...dateRange,
+            })
+            assetIds.push(...result.assets.map((a) => a.id))
+            hasNext = result.hasNextPage
+            cursor = result.endCursor
+          }
+          dispatch({
+            type: 'CLEAR_REVIEWED_FOR_ASSETS',
+            assetIds,
+            periodKey:
+              state.selectedYear && state.selectedMonth ? `${state.selectedYear}-${state.selectedMonth}` : undefined,
+          })
+          loadInitialAssets()
+        },
+      },
+    ])
+  }, [dispatch, getDateRange, state.selectedYear, state.selectedMonth, loadInitialAssets, periodLabel])
+
+  const handleClearAllReviewed = useCallback(() => {
+    Alert.alert('重置所有记录', `确定要清除全部 ${state.reviewedIds.size} 条整理记录吗？所有照片将重新展示。`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '重置',
+        style: 'destructive',
+        onPress: () => {
+          dispatch({ type: 'CLEAR_REVIEWED_IDS' })
+          loadInitialAssets()
+        },
+      },
+    ])
+  }, [dispatch, loadInitialAssets, state.reviewedIds.size])
 
   const resetPosition = useCallback(() => {
     translateX.value = withTiming(0, { duration: 200 })
@@ -296,7 +320,16 @@ export default function CleanScreen() {
   }
 
   // Loading
-  if (permissionStatus === null || !isLoaded) {
+  if (permissionStatus === null || !isLoaded || !state.reviewedIdsLoaded) {
+    return (
+      <View className='flex-1 bg-dark items-center justify-center p-8'>
+        <Text className='text-gray-500 text-base mt-2 text-center'>加载中...</Text>
+      </View>
+    )
+  }
+
+  // Still loading more pages (all loaded assets were reviewed)
+  if (state.assets.length === 0 && state.hasNextPage) {
     return (
       <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Text className='text-gray-500 text-base mt-2 text-center'>加载中...</Text>
@@ -310,53 +343,16 @@ export default function CleanScreen() {
       <View className='flex-1 bg-dark items-center justify-center p-8'>
         <Ionicons name='images-outline' size={64} color='#666' />
         <Text className='text-white text-2xl font-bold mt-4'>
-          {state.selectedYear ? `${state.selectedYear} 年没有内容` : '相册为空'}
+          {state.selectedYear ? `${periodLabel}没有内容` : '相册为空'}
         </Text>
         <Text className='text-gray-500 text-base mt-2 text-center'>没有找到任何照片或视频</Text>
         <Pressable
           className='flex-row items-center gap-2 bg-white/[0.08] px-5 py-3 rounded-xl mt-6'
-          onPress={() => setYearPickerVisible(true)}
+          onPress={() => router.back()}
         >
-          <Ionicons name='calendar-outline' size={18} color='#ccc' />
-          <Text className='text-gray-300 text-base'>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
+          <Ionicons name='arrow-back' size={18} color='#ccc' />
+          <Text className='text-gray-300 text-base'>返回首页</Text>
         </Pressable>
-
-        {/* Year picker modal */}
-        <Modal visible={yearPickerVisible} transparent animationType='fade'>
-          <Pressable
-            className='flex-1 bg-black/60 justify-center items-center'
-            onPress={() => setYearPickerVisible(false)}
-          >
-            <View
-              className='bg-dark-card rounded-2xl overflow-hidden'
-              style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
-            >
-              <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
-                选择年份
-              </Text>
-              <FlatList
-                data={yearOptions}
-                keyExtractor={(item) => String(item ?? 'all')}
-                renderItem={({ item: year }) => (
-                  <Pressable
-                    className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
-                    onPress={() => {
-                      handleSelectYear(year)
-                      setYearPickerVisible(false)
-                    }}
-                  >
-                    <Text
-                      className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
-                    >
-                      {year ?? '全部年份'}
-                    </Text>
-                    {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
-                  </Pressable>
-                )}
-              />
-            </View>
-          </Pressable>
-        </Modal>
       </View>
     )
   }
@@ -380,47 +376,23 @@ export default function CleanScreen() {
         </Pressable>
         <Pressable
           className='flex-row items-center gap-2 bg-white/[0.08] px-5 py-3 rounded-xl mt-6'
-          onPress={() => setYearPickerVisible(true)}
+          onPress={handleReReviewPeriod}
         >
-          <Ionicons name='calendar-outline' size={18} color='#ccc' />
-          <Text className='text-gray-300 text-base'>切换年份（当前：{state.selectedYear ?? '全部'}）</Text>
+          <Ionicons name='refresh-outline' size={18} color='#ccc' />
+          <Text className='text-gray-300 text-base'>重新整理{periodLabel}</Text>
         </Pressable>
-
-        <Modal visible={yearPickerVisible} transparent animationType='fade'>
-          <Pressable
-            className='flex-1 bg-black/60 justify-center items-center'
-            onPress={() => setYearPickerVisible(false)}
-          >
-            <View
-              className='bg-dark-card rounded-2xl overflow-hidden'
-              style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
-            >
-              <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
-                选择年份
-              </Text>
-              <FlatList
-                data={yearOptions}
-                keyExtractor={(item) => String(item ?? 'all')}
-                renderItem={({ item: year }) => (
-                  <Pressable
-                    className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
-                    onPress={() => {
-                      handleSelectYear(year)
-                      setYearPickerVisible(false)
-                    }}
-                  >
-                    <Text
-                      className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
-                    >
-                      {year ?? '全部年份'}
-                    </Text>
-                    {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
-                  </Pressable>
-                )}
-              />
-            </View>
+        {state.reviewedIds.size > 0 && (
+          <Pressable className='px-6 py-3 mt-2' onPress={handleClearAllReviewed}>
+            <Text className='text-gray-500 text-sm underline'>重置所有整理记录 ({state.reviewedIds.size})</Text>
           </Pressable>
-        </Modal>
+        )}
+        <Pressable
+          className='flex-row items-center gap-2 bg-white/[0.08] px-5 py-3 rounded-xl mt-6'
+          onPress={() => router.back()}
+        >
+          <Ionicons name='arrow-back' size={18} color='#ccc' />
+          <Text className='text-gray-300 text-base'>返回首页</Text>
+        </Pressable>
       </View>
     )
   }
@@ -429,17 +401,15 @@ export default function CleanScreen() {
     <View className='flex-1 bg-dark'>
       {/* Header */}
       <View className='flex-row justify-between items-center px-5 py-2'>
-        <Text className='text-gray-400 text-base'>
-          {state.currentIndex + 1} / {state.totalCount}
-        </Text>
-        <Pressable
-          className='flex-row items-center gap-1.5 bg-white/[0.08] px-3 py-1.5 rounded-2xl'
-          onPress={() => setYearPickerVisible(true)}
-        >
-          <Ionicons name='calendar-outline' size={16} color='#aaa' />
-          <Text className='text-gray-300 text-sm'>{state.selectedYear ?? '全部年份'}</Text>
-          <Ionicons name='chevron-down' size={14} color='#aaa' />
-        </Pressable>
+        <View>
+          <Text className='text-gray-400 text-base'>
+            {state.currentIndex + 1} / {state.totalCount}
+          </Text>
+          {state.reviewedIds.size > 0 && (
+            <Text className='text-gray-600 text-xs'>已整理 {state.reviewedIds.size} 张</Text>
+          )}
+        </View>
+        <Text className='text-gray-300 text-sm'>{periodLabel}</Text>
         {state.markedForDeletion.length > 0 && (
           <Pressable
             className='flex-row items-center gap-1 bg-danger/[0.15] px-3 py-1.5 rounded-2xl'
@@ -450,43 +420,6 @@ export default function CleanScreen() {
           </Pressable>
         )}
       </View>
-
-      {/* Year picker modal */}
-      <Modal visible={yearPickerVisible} transparent animationType='fade'>
-        <Pressable
-          className='flex-1 bg-black/60 justify-center items-center'
-          onPress={() => setYearPickerVisible(false)}
-        >
-          <View
-            className='bg-dark-card rounded-2xl overflow-hidden'
-            style={{ width: SCREEN_WIDTH * 0.7, maxHeight: 400 }}
-          >
-            <Text className='text-white text-base font-semibold text-center py-3.5 border-b border-white/10'>
-              选择年份
-            </Text>
-            <FlatList
-              data={yearOptions}
-              keyExtractor={(item) => String(item ?? 'all')}
-              renderItem={({ item: year }) => (
-                <Pressable
-                  className={`flex-row justify-between items-center px-5 py-3.5 ${state.selectedYear === year ? 'bg-danger/10' : ''}`}
-                  onPress={() => {
-                    handleSelectYear(year)
-                    setYearPickerVisible(false)
-                  }}
-                >
-                  <Text
-                    className={`text-base ${state.selectedYear === year ? 'text-danger font-semibold' : 'text-gray-300'}`}
-                  >
-                    {year ?? '全部年份'}
-                  </Text>
-                  {state.selectedYear === year && <Ionicons name='checkmark' size={20} color='#ff3b30' />}
-                </Pressable>
-              )}
-            />
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* Card area */}
       <View className='flex-1 items-center justify-center'>
